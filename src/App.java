@@ -10,7 +10,7 @@ import java.util.Set;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
-public class App extends JFrame {
+public final class App extends JFrame {
     public static App Instance;
     public List<Ant> ants = new ArrayList<>();
     private final int[][] antPositions; // [antIndex][0]=row, [antIndex][1]=col
@@ -19,6 +19,7 @@ public class App extends JFrame {
     private final int rows;
     private final int cols;
     private int MAX_ANTS = 100;
+    private JFrame antListFrame = null;
 
     public App(int x, int y, int antCount) {
         setTitle("Mrowisko");
@@ -32,6 +33,8 @@ public class App extends JFrame {
         pack();
         setLocationRelativeTo(null);
         InitializeAnts(antCount);
+        setVisible(true);
+        ShowAntListWindow();
         StartWorldLoop();
     }
 
@@ -68,7 +71,7 @@ public class App extends JFrame {
         }
         int index = ants.indexOf(ant);
         occupied.remove(antPositions[index][0]+","+antPositions[index][1]);
-        // Shift remaining ants
+
         for (int i = index; i < ants.size() - 1; i++) {
             ants.set(i, ants.get(i + 1));
             antPositions[i] = antPositions[i + 1];
@@ -127,6 +130,48 @@ public class App extends JFrame {
         }
         System.out.println("tick end");
         board.repaint();
+        ShowAntListWindow();
+    }
+
+    public void ShowAntListWindow() {
+        if (antListFrame == null) {
+            antListFrame = new JFrame("Ant List");
+            antListFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            antListFrame.setSize(300, 50 + 60 * ants.size());
+            antListFrame.setLocationRelativeTo(this);
+            JPanel panel = new JPanel();
+            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+            antListFrame.setContentPane(new JScrollPane(panel));
+            antListFrame.setVisible(true);
+        }
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        for (Ant ant : ants) {
+            JPanel antPanel = new JPanel();
+            antPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+            JLabel imgLabel;
+            BufferedImage img;
+            if (ant.IsDead()) {
+                img = board.getAntDeadImg();
+            } else if (ant.CanCopulate()) {
+                img = board.getAntBigImg();
+            } else {
+                img = board.getAntSmallImg();
+            }
+            if (img != null) {
+                imgLabel = new JLabel(new ImageIcon(img.getScaledInstance(32, 32, java.awt.Image.SCALE_SMOOTH)));
+            } else {
+                imgLabel = new JLabel();
+            }
+            antPanel.add(imgLabel);
+            antPanel.add(new JLabel("Ant, age: " + ant.GetAge()));
+            panel.add(antPanel);
+        }
+        JScrollPane scrollPane = new JScrollPane(panel);
+        antListFrame.setContentPane(scrollPane);
+        antListFrame.revalidate();
+        antListFrame.repaint();
     }
 
     public static void main(String[] args) {
@@ -233,4 +278,8 @@ class BoardPanel extends JPanel {
             }
         }
     }
+
+    public BufferedImage getAntBigImg() { return antBigImg; }
+    public BufferedImage getAntSmallImg() { return antSmallImg; }
+    public BufferedImage getAntDeadImg() { return antDeadImg; }
 }
