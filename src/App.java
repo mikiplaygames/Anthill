@@ -22,7 +22,7 @@ public final class App extends JFrame {
 
     // App constructor
     public App(int x, int y, int antCount) {
-        setTitle("Mrowisko");
+        setTitle("Mrowisko Mikolaja Gajewskiego");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         rows = y;
         cols = x;
