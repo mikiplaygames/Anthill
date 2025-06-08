@@ -1,3 +1,4 @@
+/// Programowal: Mikolaj Gajewski 205813 MTR \\\
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -9,18 +10,17 @@ import java.util.Random;
 import java.util.Set;
 import javax.imageio.ImageIO;
 import javax.swing.*;
-
 public final class App extends JFrame {
-    public static App Instance;
-    public List<Ant> ants = new ArrayList<>();
-    private final int[][] antPositions; // [antIndex][0]=row, [antIndex][1]=col
-    private final Set<String> occupied = new HashSet<>();
-    private final BoardPanel board;
-    private final int rows;
-    private final int cols;
-    private int MAX_ANTS = 100;
-    private JFrame antListFrame = null;
+    public static App Instance; // Singleton instance
+    public List<Ant> ants = new ArrayList<>(); // All ants
+    private final int[][] antPositions; // Ant positions
+    private final Set<String> occupied = new HashSet<>(); // Occupied cells
+    private final BoardPanel board; // Board panel
+    private final int rows, cols; // Grid size
+    private int MAX_ANTS = 100; // Max ants
+    private JFrame antListFrame = null; // Ant list window
 
+    // App constructor
     public App(int x, int y, int antCount) {
         setTitle("Mrowisko");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -32,12 +32,13 @@ public final class App extends JFrame {
         setContentPane(board);
         pack();
         setLocationRelativeTo(null);
-        InitializeAnts(antCount);
+        InitializeAnts(antCount); // Place starting ants
         setVisible(true);
-        ShowAntListWindow();
-        StartWorldLoop();
+        ShowAntListWindow(); // Show ant list
+        StartWorldLoop(); // Start simulation timer
     }
 
+    // Randomly place the initial ants on the board
     private void InitializeAnts(int antCount) {
         Random rand = new Random();
         for (int i = 0; i < antCount; i++) {
@@ -45,12 +46,13 @@ public final class App extends JFrame {
             do {
                 r = rand.nextInt(rows);
                 c = rand.nextInt(cols);
-            } while (occupied.contains(r+","+c));
-            SpawnAnt(c, r);   
+            } while (occupied.contains(r+","+c)); // Ensure no overlap
+            SpawnAnt(c, r);
         }
         board.repaint();
     }
 
+    // Add a new ant at (x, y) if possible
     public void SpawnAnt(int x, int y)
     {
         if (MAX_ANTS <= ants.size()) {
@@ -64,6 +66,7 @@ public final class App extends JFrame {
         occupied.add(y+","+x);
     }
 
+    // Safely remove an ant from the board
     public void RemoveAnt(Ant ant) {
         if (!ants.contains(ant)) {
             System.out.println("Invalid ant.");
@@ -71,7 +74,7 @@ public final class App extends JFrame {
         }
         int index = ants.indexOf(ant);
         occupied.remove(antPositions[index][0]+","+antPositions[index][1]);
-
+        // Shift remaining ants and positions
         for (int i = index; i < ants.size() - 1; i++) {
             ants.set(i, ants.get(i + 1));
             antPositions[i] = antPositions[i + 1];
@@ -79,11 +82,13 @@ public final class App extends JFrame {
         ants.remove(ants.size() - 1);
     }
 
+    // Start the simulation tick timer (world loop)
     private void StartWorldLoop() {
         Timer timer = new Timer(500, _ -> WorldTick());
         timer.start();
     }
 
+    // move ants, update state, render board
     private void WorldTick() {
         Random rand = new Random();
         int[][] directions = {
@@ -93,9 +98,9 @@ public final class App extends JFrame {
         };
         for (int i = 0; i < ants.size(); i++) {
             System.out.println("Ant " + i + " at (" + antPositions[i][0] + "," + antPositions[i][1] + "), age: " + ants.get(i).GetAge());
-            ants.get(i).IncrementAge();
+            ants.get(i).IncrementAge(); // Age the ant
             if (ants.get(i).IsDead()) {
-                continue;
+                continue; // if dead, skip movement
             }
             int r = antPositions[i][0];
             int c = antPositions[i][1];
@@ -109,7 +114,7 @@ public final class App extends JFrame {
             }
             if (!moves.isEmpty()) {
                 int[] move = moves.get(rand.nextInt(moves.size()));
-
+                // If the target cell is occupied, try to spawn a new ant
                 if (occupied.contains(move[0]+","+move[1])) {
                     if (!ants.get(i).CanCopulate())
                         continue;
@@ -122,6 +127,7 @@ public final class App extends JFrame {
                     }
                     continue;
                 }
+                // Move the ant to the new cell
                 occupied.remove(antPositions[i][0]+","+antPositions[i][1]);
                 antPositions[i][0] = move[0];
                 antPositions[i][1] = move[1];
@@ -129,10 +135,11 @@ public final class App extends JFrame {
             }
         }
         System.out.println("tick end");
-        board.repaint();
-        ShowAntListWindow();
+        board.repaint(); // Redraw the board
+        ShowAntListWindow(); // Update the ant list window
     }
 
+    // Show or update the window listing all ants and their ages
     public void ShowAntListWindow() {
         if (antListFrame == null) {
             antListFrame = new JFrame("Ant List");
@@ -144,7 +151,7 @@ public final class App extends JFrame {
             antListFrame.setContentPane(new JScrollPane(panel));
             antListFrame.setVisible(true);
         }
-
+        // Update the list contents
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         for (Ant ant : ants) {
@@ -229,6 +236,7 @@ public final class App extends JFrame {
     }
 }
 
+// BoardPanel draws the grid and ants
 class BoardPanel extends JPanel {
     private int rows, cols;
     private int cellSize = 40;
@@ -252,6 +260,7 @@ class BoardPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        // Draw the grid
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
                 int x = col * cellSize;
@@ -262,6 +271,7 @@ class BoardPanel extends JPanel {
                 g.drawRect(x, y, cellSize, cellSize);
             }
         }
+        // Draw ants as images
         BufferedImage img;
         for (int i = 0; i < antPositions.length; i++) {
             int[] pos = antPositions[i];
@@ -279,6 +289,7 @@ class BoardPanel extends JPanel {
         }
     }
 
+    // Getters for ant images
     public BufferedImage getAntBigImg() { return antBigImg; }
     public BufferedImage getAntSmallImg() { return antSmallImg; }
     public BufferedImage getAntDeadImg() { return antDeadImg; }
