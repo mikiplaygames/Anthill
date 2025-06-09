@@ -13,7 +13,6 @@ import javax.swing.*;
 public final class App extends JFrame {
     public static App Instance; // Singleton instance
     public List<Ant> ants = new ArrayList<>(); // All ants
-    private final int[][] antPositions; // Ant positions
     private final Set<String> occupied = new HashSet<>(); // Occupied cells
     private final BoardPanel board; // Board panel
     private final int rows, cols; // Grid size
@@ -30,8 +29,7 @@ public final class App extends JFrame {
         rows = y;
         cols = x;
         MAX_ANTS = (x*y) / 2;
-        antPositions = new int[MAX_ANTS][2];
-        board = new BoardPanel(y, x, antPositions);
+        board = new BoardPanel(y, x);
         setContentPane(board);
         pack();
         setLocationRelativeTo(null);
@@ -45,12 +43,12 @@ public final class App extends JFrame {
     private void InitializeAnts(int antCount) {
         Random rand = new Random();
         for (int i = 0; i < antCount; i++) {
-            int r, c;
+            int x, y;
             do {
-                r = rand.nextInt(rows);
-                c = rand.nextInt(cols);
-            } while (occupied.contains(r+","+c)); // Ensure no overlap
-            SpawnAnt(c, r);
+                y = rand.nextInt(rows);
+                x = rand.nextInt(cols);
+            } while (occupied.contains(x+","+y)); // Ensure no overlap
+            SpawnAnt(x, y);
         }
         board.repaint();
     }
@@ -62,11 +60,9 @@ public final class App extends JFrame {
             System.out.println("Max ant count reached, cannot spawn more ants.");
             return;
         }
-        antPositions[ants.size()][0] = y;
-        antPositions[ants.size()][1] = x;
-        Ant ant = new Ant();
+        Ant ant = new Ant(x,y);
         ants.add(ant);
-        occupied.add(y+","+x);
+        occupied.add(x+","+y);
     }
 
     // Safely remove an ant from the board
@@ -76,11 +72,10 @@ public final class App extends JFrame {
             return;
         }
         int index = ants.indexOf(ant);
-        occupied.remove(antPositions[index][0]+","+antPositions[index][1]);
+        occupied.remove(ant.GetX()+","+ant.GetY());
         // Shift remaining ants and positions
         for (int i = index; i < ants.size() - 1; i++) {
             ants.set(i, ants.get(i + 1));
-            antPositions[i] = antPositions[i + 1];
         }
         ants.remove(ants.size() - 1);
     }
@@ -101,19 +96,19 @@ public final class App extends JFrame {
             {1, -1},  {1, 0},  {1, 1}
         };
         for (int i = 0; i < ants.size(); i++) {
-            System.out.println("Ant " + i + " at (" + antPositions[i][0] + "," + antPositions[i][1] + "), age: " + ants.get(i).GetAge());
+            System.out.println("Ant " + i + " at (" + ants.get(i).GetX() + "," + ants.get(i).GetY() + "), age: " + ants.get(i).GetAge());
             ants.get(i).IncrementAge(); // Age the ant
             if (ants.get(i).IsDead()) {
                 continue; // if dead, skip movement
             }
-            int r = antPositions[i][0];
-            int c = antPositions[i][1];
+            int x = ants.get(i).GetX();
+            int y = ants.get(i).GetY();
             List<int[]> moves = new ArrayList<>();
             for (int[] d : directions) {
-                int nr = r + d[0];
-                int nc = c + d[1];
-                if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                    moves.add(new int[]{nr, nc});
+                int nx = x + d[0];
+                int ny = y + d[1];
+                if (nx >= 0 && ny < rows && ny >= 0 && nx < cols) {
+                    moves.add(new int[]{nx, ny});
                 }
             }
             if (!moves.isEmpty()) {
@@ -132,9 +127,8 @@ public final class App extends JFrame {
                     continue;
                 }
                 // Move the ant to the new cell
-                occupied.remove(antPositions[i][0]+","+antPositions[i][1]);
-                antPositions[i][0] = move[0];
-                antPositions[i][1] = move[1];
+                occupied.remove(ants.get(i).GetX()+","+ants.get(i).GetY());
+                ants.get(i).SetPosition(move[0], move[1]);
                 occupied.add(move[0]+","+move[1]);
             }
         }
@@ -268,13 +262,11 @@ public final class App extends JFrame {
 class BoardPanel extends JPanel {
     private int rows, cols;
     private int cellSize = 40;
-    private int[][] antPositions;
     private BufferedImage antBigImg, antSmallImg, antDeadImg;
 
-    public BoardPanel(int rows, int cols, int[][] antPositions) {
+    public BoardPanel(int rows, int cols) {
         this.rows = rows;
         this.cols = cols;
-        this.antPositions = antPositions;
         setPreferredSize(new Dimension(cols * cellSize, rows * cellSize));
         try {
             antBigImg = ImageIO.read(new File("ant_big.png"));
@@ -301,10 +293,9 @@ class BoardPanel extends JPanel {
         }
         // Draw ants as images
         BufferedImage img;
-        for (int i = 0; i < antPositions.length; i++) {
-            int[] pos = antPositions[i];
-            int x = pos[1] * cellSize;
-            int y = pos[0] * cellSize;
+        for (int i = 0; i < App.Instance.ants.size(); i++) {
+            int x = App.Instance.ants.get(i).GetX() * cellSize;
+            int y = App.Instance.ants.get(i).GetY() * cellSize;
             if (i < App.Instance.ants.size()) {
                 Ant ant = App.Instance.ants.get(i);
                 if (ant.IsDead()) {
