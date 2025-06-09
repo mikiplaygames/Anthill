@@ -19,6 +19,9 @@ public final class App extends JFrame {
     private final int rows, cols; // Grid size
     private int MAX_ANTS = 100; // Max ants
     private JFrame antListFrame = null; // Ant list window
+    private int daysPassed = 0; // Days passed in simulation
+    private Timer simulationTimer;
+    private boolean timerRunning = true;
 
     // App constructor
     public App(int x, int y, int antCount) {
@@ -84,8 +87,9 @@ public final class App extends JFrame {
 
     // Start the simulation tick timer (world loop)
     private void StartWorldLoop() {
-        Timer timer = new Timer(500, _ -> WorldTick());
-        timer.start();
+        simulationTimer = new Timer(500, _ -> WorldTick());
+        simulationTimer.start();
+        timerRunning = true;
     }
 
     // move ants, update state, render board
@@ -134,6 +138,7 @@ public final class App extends JFrame {
                 occupied.add(move[0]+","+move[1]);
             }
         }
+        daysPassed++;
         System.out.println("tick end");
         board.repaint(); // Redraw the board
         ShowAntListWindow(); // Update the ant list window
@@ -144,16 +149,39 @@ public final class App extends JFrame {
         if (antListFrame == null) {
             antListFrame = new JFrame("Ant List");
             antListFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-            antListFrame.setSize(300, 50 + 60 * ants.size());
+            antListFrame.setSize(350, 80 + 60 * ants.size());
             antListFrame.setLocationRelativeTo(this);
             JPanel panel = new JPanel();
             panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
             antListFrame.setContentPane(new JScrollPane(panel));
             antListFrame.setVisible(true);
         }
-        // Update the list contents
+        // Top panel with daysPassed label and start/stop button
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
+        topPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JLabel daysLabel = new JLabel("Days passed: " + daysPassed);
+        daysLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JButton toggleButton = new JButton(timerRunning ? "Stop time" : "Start time");
+        toggleButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        toggleButton.addActionListener(_ -> {
+            if (timerRunning) {
+                simulationTimer.stop();
+            } else {
+                simulationTimer.start();
+            }
+            timerRunning = !timerRunning;
+            toggleButton.setText(timerRunning ? "Stop time" : "Start time");
+        });
+        topPanel.add(Box.createHorizontalGlue());
+        topPanel.add(daysLabel);
+        topPanel.add(Box.createRigidArea(new Dimension(16, 0)));
+        topPanel.add(toggleButton);
+        topPanel.add(Box.createHorizontalGlue());
+
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.add(topPanel);
         for (Ant ant : ants) {
             JPanel antPanel = new JPanel();
             antPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
@@ -172,7 +200,7 @@ public final class App extends JFrame {
                 imgLabel = new JLabel();
             }
             antPanel.add(imgLabel);
-            antPanel.add(new JLabel("Ant, age: " + ant.GetAge()));
+            antPanel.add(new JLabel("Ant, age: " + (ant.IsDead() ? "DEAD" : ant.GetAge())));
             panel.add(antPanel);
         }
         JScrollPane scrollPane = new JScrollPane(panel);
